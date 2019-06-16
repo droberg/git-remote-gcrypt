@@ -331,17 +331,13 @@ CLEAN_FINAL()
 
 ENCRYPT()
 {
-	rungpg --batch --force-mdc --compress-algo none --trust-model=always --passphrase-fd 3 -c 3<<EOF
-$1
-EOF
+	rungpg --batch --force-mdc --compress-algo none --trust-model=always --passphrase "$1" -c
 }
 
 DECRYPT()
 {
 	rungpg -q --batch --no-default-keyring --secret-keyring /dev/null \
-		--keyring /dev/null --passphrase-fd 3 -d  3<<EOF
-$1
-EOF
+		--keyring /dev/null --passphrase "$1" -d
 }
 
 # Encrypt to recipients $1
@@ -358,8 +354,9 @@ PRIVENCRYPT()
 PRIVDECRYPT()
 {
 	local status_=
-	exec 4>&1 &&
-	status_=$(rungpg --status-fd 3 -q -d 3>&1 1>&4) &&
+	local tmp_status_file="$Tempdir/status"
+	rungpg --status-file "$tmp_status_file" -q -d &&
+	status_=$(cat "$tmp_status_file") &&
 	xfeed "$status_" grep "^\[GNUPG:\] ENC_TO " >/dev/null &&
 	(xfeed "$status_" grep -e "$1" >/dev/null || {
 		echo_info "Failed to verify manifest signature!" &&
