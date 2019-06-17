@@ -824,8 +824,8 @@ EOF
 	done <<EOF
 $1
 EOF
-	
-	echo_git 
+
+	echo_git
 }
 
 cleanup_tmpfiles()
