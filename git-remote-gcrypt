@@ -268,6 +268,7 @@ PUT_FINAL()
 	then
 		:
 	else
+		echo_info "Pushing to remote (may request a passphrase)"
 		git push --quiet -f "${1#gitception://}" "$Gref:$Gref_rbranch"
 	fi
 }
@@ -331,11 +332,13 @@ CLEAN_FINAL()
 
 ENCRYPT()
 {
+	echo_info "Encrypting with passphrase"
 	rungpg --batch --force-mdc --compress-algo none --trust-model=always --passphrase "$1" -c
 }
 
 DECRYPT()
 {
+	echo_info "Decrypting with passphrase"
 	rungpg -q --batch --no-default-keyring --secret-keyring /dev/null \
 		--keyring /dev/null --passphrase "$1" -d
 }
@@ -525,6 +528,7 @@ ensure_connected()
 		Repoid=$(git config "remote.$r_name.gcrypt-id" || :)
 
 
+	echo_info "Fetching remote (may request a passphrase)"
 	tmp_manifest="$Tempdir/maniF"
 	tmp_stderr="$Tempdir/stderr"
 	GET "$URL" "$Manifestfile" "$tmp_manifest" 2>| "$tmp_stderr" || {
@@ -540,7 +544,7 @@ ensure_connected()
 	}
 
 	Did_find_repo=yes
-	echo_info "Decrypting manifest"
+	echo_info "Decrypting manifest (may request a passphrase)"
 	manifest_=$(PRIVDECRYPT "$r_sigmatch" "$r_signers" < "$tmp_manifest") &&
 		isnonnull "$manifest_" ||
 		echo_die "Failed to decrypt manifest!"
@@ -580,6 +584,7 @@ get_verify_decrypt_pack()
 {
 	local rcv_id= tmp_encrypted=
 	tmp_encrypted="$Tempdir/packF"
+	echo_info "Fetching remote (may request a passphrase)"
 	GET "$URL" "$2" "$tmp_encrypted" &&
 	rcv_id=$(gpg_hash "$1" < "$tmp_encrypted") &&
 	iseq "$rcv_id" "$2" || echo_die "Packfile $2 does not match digest!"
@@ -781,7 +786,7 @@ EOF
 
 	# Generate manifest
 	echo_info "Encrypting to: $Recipients"
-	echo_info "Requesting manifest signature"
+	echo_info "Requesting manifest signature (may request a passphrase)"
 
 	tmp_manifest="$Tempdir/maniP"
 	PRIVENCRYPT "$Recipients" > "$tmp_manifest" <<EOF
