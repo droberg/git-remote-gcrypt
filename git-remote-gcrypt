@@ -359,7 +359,7 @@ PRIVDECRYPT()
 	local status_=
 	local tmp_status_file="$Tempdir/status"
 	rungpg --status-file "$tmp_status_file" -q -d &&
-	status_=$(cat "$tmp_status_file") &&
+	status_=$(< "$tmp_status_file") &&
 	xfeed "$status_" grep "^\[GNUPG:\] ENC_TO " >/dev/null &&
 	(xfeed "$status_" grep -e "$1" >/dev/null || {
 		echo_info "Failed to verify manifest signature!" &&
