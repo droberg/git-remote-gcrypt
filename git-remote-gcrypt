@@ -462,7 +462,7 @@ read_config()
 
 		isnonnull "$fprid_" &&
 		signers_="$signers_ $keyid_" &&
-		append_to @good_sig "^\[GNUPG:\] VALIDSIG .*$fprid_$" || {
+		append_to @good_sig "^\[GNUPG:\] VALIDSIG .*$fprid_[[:space:]]*$" || {
 			echo_info "WARNING: Skipping missing key $recp_"
 			continue
 		}
