@@ -30,7 +30,8 @@ collaboration using typical untrusted file hosts or services.
 Installation
 ............
 
-* ``apt-get install git-remote-gcrypt`` on Debian and Ubuntu systems
+* use your GNU/Linux distribution's package manager -- Debian, Ubuntu,
+  Fedora, Arch and some smaller distros are known to have packages
 
 * run the supplied ``install.sh`` script on other systems
 
@@ -39,7 +40,7 @@ Quickstart
 
 Create an encrypted remote by pushing to it::
 
-    git remote add cryptremote gcrypt::rsync://example.com:repo
+    git remote add cryptremote gcrypt::rsync://example.com/repo
     git push cryptremote master
     > gcrypt: Setting up new repository
     > gcrypt: Remote ID is :id:7VigUnLVYVtZx8oir34R
@@ -89,6 +90,21 @@ The following ``git-config(1)`` variables are supported:
     part of the participant list. You may use the per-remote version
     to sign different remotes using different keys.
 
+``remote.<name>.gcrypt-rsync-put-flags``
+    ..
+``gcrypt.rsync-put-flags``
+    Flags to be passed to ``rsync`` when uploading to a remote using the
+    ``rsync://`` backend. If the flags are set to a specific remote, the
+    global flags, if also set, will not be applied for that remote.
+
+``remote.<name>.gcrypt-require-explicit-force-push``
+    ..
+``gcrypt.require-explicit-force-push``
+    A longstanding bug is that every git push effectively has a ``--force``.
+
+    If this flag is set to ``true``, git-remote-gcrypt will refuse to push,
+    unless ``--force`` is passed, or refspecs are prefixed with ``+``.
+
 Environment variables
 =====================
 
@@ -100,7 +116,7 @@ Examples
 
 How to set up a remote for two participants::
 
-    git remote add cryptremote gcrypt::rsync://example.com:repo
+    git remote add cryptremote gcrypt::rsync://example.com/repo
     git config remote.cryptremote.gcrypt-participants "KEY1 KEY2"
     git push cryptremote master
 
@@ -147,10 +163,12 @@ Performance
     repository hosting service like Gitolite, GitHub or GitLab.
 
 rsync URIs
-    Note that the URI format for the rsync backend is, regretably,
-    non-standard.  git-remote-gcrypt uses ``rsync://user@host:path``
-    whereas plain rsync uses either ``user@host:path`` or
-    ``rsync://user@host/path``.
+    The URI format for the rsync backend is ``rsync://user@host/path``,
+    which translates to the rsync location ``user@host:/path``,
+    accessed over ssh. Note that the path is absolute, not relative to the
+    home directory. An earlier non-standard URI format is also supported:
+    ``rsync://user@host:path``, which translates to the rsync location
+    ``user@host:path``
 
 rclone backend
     In addition to adding the rclone backend as a remote with URI like
