@@ -274,6 +274,7 @@ PUT_FINAL()
 	then
 		:
 	else
+		echo_info "Pushing to remote (may request a passphrase)"
 		git push --quiet -f "${1#gitception://}" "$Gref:$Gref_rbranch"
 	fi
 }
@@ -338,17 +339,15 @@ CLEAN_FINAL()
 
 ENCRYPT()
 {
-	rungpg --batch --force-mdc --compress-algo none --trust-model=always --passphrase-fd 3 -c 3<<EOF
-$1
-EOF
+	echo_info "Encrypting with passphrase"
+	rungpg --batch --force-mdc --compress-algo none --trust-model=always --passphrase "$1" -c
 }
 
 DECRYPT()
 {
+	echo_info "Decrypting with passphrase"
 	rungpg -q --batch --no-default-keyring --secret-keyring /dev/null \
-		--keyring /dev/null --passphrase-fd 3 -d  3<<EOF
-$1
-EOF
+		--keyring /dev/null --passphrase "$1" -d
 }
 
 # Encrypt to recipients $1
@@ -365,8 +364,9 @@ PRIVENCRYPT()
 PRIVDECRYPT()
 {
 	local status_=
-	exec 4>&1 &&
-	status_=$(rungpg --status-fd 3 -q -d 3>&1 1>&4) &&
+	local tmp_status_file="$Tempdir/status"
+	rungpg --status-file "$tmp_status_file" -q -d &&
+	status_=$(< "$tmp_status_file") &&
 	xfeed "$status_" grep "^\[GNUPG:\] ENC_TO " >/dev/null &&
 	(xfeed "$status_" grep -e "$1" >/dev/null || {
 		echo_info "Failed to verify manifest signature!" &&
@@ -398,9 +398,9 @@ rungpg()
 	# due to trying to print messages to it, even if a gpg agent is set
 	# up. --no-tty fixes this.
 	if [ "x$GPG_AGENT_INFO" != "x" ]; then
-		${GPG} --no-tty $@
+		"${GPG}" --no-tty $@
 	else
-		${GPG} $@
+		"${GPG}" $@
 	fi
 }
 
@@ -473,7 +473,7 @@ read_config()
 
 		isnonnull "$fprid_" &&
 		signers_="$signers_ $keyid_" &&
-		append_to @good_sig "^\[GNUPG:\] VALIDSIG .*$fprid_$" || {
+		append_to @good_sig "^\[GNUPG:\] VALIDSIG .*$fprid_[[:space:]]*$" || {
 			echo_info "WARNING: Skipping missing key $recp_"
 			continue
 		}
@@ -539,6 +539,7 @@ ensure_connected()
 		Repoid=$(git config "remote.$r_name.gcrypt-id" || :)
 
 
+	echo_info "Fetching remote (may request a passphrase)"
 	tmp_manifest="$Tempdir/maniF"
 	tmp_stderr="$Tempdir/stderr"
 	GET "$URL" "$Manifestfile" "$tmp_manifest" 2>| "$tmp_stderr" || {
@@ -554,7 +555,7 @@ ensure_connected()
 	}
 
 	Did_find_repo=yes
-	echo_info "Decrypting manifest"
+	echo_info "Decrypting manifest (may request a passphrase)"
 	manifest_=$(PRIVDECRYPT "$r_sigmatch" "$r_signers" < "$tmp_manifest") &&
 		isnonnull "$manifest_" ||
 		echo_die "Failed to decrypt manifest!"
@@ -594,6 +595,7 @@ get_verify_decrypt_pack()
 {
 	local rcv_id= tmp_encrypted=
 	tmp_encrypted="$Tempdir/packF"
+	echo_info "Fetching remote (may request a passphrase)"
 	GET "$URL" "$2" "$tmp_encrypted" &&
 	rcv_id=$(gpg_hash "$1" < "$tmp_encrypted") &&
 	iseq "$rcv_id" "$2" || echo_die "Packfile $2 does not match digest!"
@@ -813,7 +815,7 @@ EOF
 
 	# Generate manifest
 	echo_info "Encrypting to: $Recipients"
-	echo_info "Requesting manifest signature"
+	echo_info "Requesting manifest signature (may request a passphrase)"
 
 	tmp_manifest="$Tempdir/maniP"
 	PRIVENCRYPT "$Recipients" > "$tmp_manifest" <<EOF
@@ -856,8 +858,8 @@ EOF
 	done <<EOF
 $1
 EOF
-	
-	echo_git 
+
+	echo_git
 }
 
 cleanup_tmpfiles()
